@@ -2,6 +2,7 @@
 using Commander.Data;
 using Commander.Dtos;
 using Commander.Models;
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Commander.Controllers
@@ -61,19 +62,67 @@ namespace Commander.Controllers
 
         public ActionResult UpdateCommand(int id, CommandUpdateDto commandUpdateDto)
         {
-            var command = _repo .GetCommandById(id);
-            if(command == null)
+            var command = _repo.GetCommandById(id);
+            if (command == null)
             {
                 return NotFound();
             }
 
-            _mapper.Map(commandUpdateDto, command);
-            _repo .UpdateCommand(command);
+            _mapper.Map(commandUpdateDto, command); /*Updates the modal*/
+            _repo.UpdateCommand(command);
             _repo.SaveChanges();
 
             return NoContent();
         }
 
+
+
+
+        //Patch api/commands/{id}
+        [HttpPatch("{id}")]
+
+        public ActionResult PartialCommandUpdate(int id, JsonPatchDocument<CommandUpdateDto> patchDoc)
+        {
+            var commandModelFromRepo = _repo.GetCommandById(id);
+            if (commandModelFromRepo == null)
+            {
+                return NotFound();
+            }
+
+            var commandPatch = _mapper.Map<CommandUpdateDto>(commandModelFromRepo);
+            patchDoc.ApplyTo(commandPatch);
+
+            if (!TryValidateModel(commandPatch))
+            {
+                return ValidationProblem(ModelState);
+            }
+
+            _mapper.Map(commandPatch, commandModelFromRepo);
+            _repo.UpdateCommand(commandModelFromRepo);
+            _repo.SaveChanges();
+            return NoContent();
+        }
+
+
+        //Delete api/commands/{id}
+        [HttpDelete("{id}")]
+        public IActionResult DeleteCommand(int id)
+        {
+            var commandModelFromRepo = _repo.GetCommandById(id);
+            if (commandModelFromRepo == null)
+            {
+                return NotFound();
+
+            }
+
+            _repo.DeleteCommand(commandModelFromRepo);
+            _repo.SaveChanges();
+            return NoContent();
+        }
+
+
+
+
     }
 }
- 
+
